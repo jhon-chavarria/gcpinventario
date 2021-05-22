@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.0"
+	xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
+	<persistence-unit name="GCPSIADEJPA" transaction-type="JTA">
+
+		<class>ni.com.casapellas.cxccobro.entity.GcPDocumentsMaster</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpAccountStatementEmailShipment</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCollectionList</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCollectionListPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCollectionNoticeDelivery</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCollectionNoticeDeliveryPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCollectionProcess</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCollectionProcessPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfActivityRule</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfCatalog</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfCgXBnXCc</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfCollectionCompany</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfCollectionGroup</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfCustNDBussLine</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfCustomerContactND</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfCustomerPhoneNotification</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfEmployee</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfGcGcusActScript</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfGeneralProfile</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfNotification</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfNotificationPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfPhoneNumber</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfProfile</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfReallocateActivityDetail</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfReallocateDatail</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfReallocateMaster</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfRecipe</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpConfScript</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCustomerPrejudicial</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpCustomerPrejudicialPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpDocumentsDetail</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpDocumentsDetailPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpDocumentsXPaymentPromise</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpDocumentsXPaymentPromiseNotice</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpDocumentsXPaymentPromiseNoticePK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpDocumentsXPaymentPromisePK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpEmailLogContentDetail</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpEmailLogContentDetailPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpEmailLogContentMaster</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpEmailLogElement</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpEmailShipmentLog</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpEmailShipmentLogDetail</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpEmailShipmentLogDetailPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpRequestedActivity</class>
+		<class>ni.com.casapellas.cxccobro.entity.GcpRequestedActivityPK</class>
+		<class>ni.com.casapellas.cxccobro.entity.GpcDocumentsMaster</class>
+		<class>ni.com.casapellas.cxccobro.entity.Msgsestcta</class>
+		<class>ni.com.casapellas.cxccobro.report.entity.GcpCollectionReport</class>
+		<class>ni.com.casapellas.cxccobro.report.entity.GcpCollectionReportRangeDetail</class>
+		<class>ni.com.casapellas.cxccobro.report.entity.GcpCollectionReportRangeDetailPK</class>
+		<class>ni.com.casapellas.cxccobro.report.entity.GcpCollectonReportMaster</class>
+		<class>ni.com.casapellas.cxccobro.report.entity.GcpConfCollectionRange</class>
+		<class>ni.com.casapellas.cxccobro.report.entity.GcpConfCollectionRangeDetail</class>
+		<class>ni.com.casapellas.ens.entity.Appsession</class>
+		<class>ni.com.casapellas.ens.entity.Log</class>
+		<class>ni.com.casapellas.ens.entity.LogPK</class>
+		<class>ni.com.casapellas.ens.entity.Tokenxtrans</class>
+		<class>ni.com.casapellas.ens.entity.TokenxtransPK</class>
+		<class>ni.com.casapellas.ens.entity.Vautoriz</class>
+		<class>ni.com.casapellas.ens.entity.VautorizPK</class>
+						
+		<class>ni.com.casapellas.gcpquiosco.pojo.LineaNegocio</class>
+		<class>ni.com.casapellas.gcpquiosco.pojo.ReciboTicket</class>
+		<class>ni.com.casapellas.gcpquiosco.pojo.TipoTarjeta</class>
+		<class>ni.com.casapellas.gcpsiade.entity.CatalogosJdedward</class>
+		<class>ni.com.casapellas.gcpsiade.entity.CatalogosJdedwardPK</class>
+		<class>ni.com.casapellas.gcpsiade.entity.ConfAccesoXModulo</class>
+		<class>ni.com.casapellas.gcpsiade.entity.ConfModulo</class>
+		<class>ni.com.casapellas.gcpsiade.entity.IndexIndicadorexusuarioxperfil</class>
+		<class>ni.com.casapellas.gcpsiade.entity.IndexWidgetxusuarioxperfil</class>
+		<class>ni.com.casapellas.gcpsiade.entity.IndicadoresUnidadNegocio</class>
+		<class>ni.com.casapellas.gcpsiade.entity.IndicadoresxindicadorUnidadNegocio</class>
+		<class>ni.com.casapellas.gcpsiade.entity.Invmetasn</class>
+		<class>ni.com.casapellas.gcpsiade.entity.InvmetasnPK</class>
+		<class>ni.com.casapellas.gcpsiade.entity.NivelIndicador</class>
+		<class>ni.com.casapellas.gcpsiade.entity.TipoGrafico</class>
+		<class>ni.com.casapellas.gcpsiade.entity.TipoIndicador</class>
+		<class>ni.com.casapellas.gcpsiade.entity.TipoVisualizacionIndicador</class>
+		<class>ni.com.casapellas.gcpsiade.entity.Widget</class>
+		<class>ni.com.casapellas.gcpsiade.entity.Wizardxusuario</class>
+		<class>ni.com.casapellas.qs36f.entity.Invd73</class>
+		<class>ni.com.casapellas.qs36f.entity.Invd731</class>
+		<class>ni.com.casapellas.qs36f.entity.Invd731PK</class>
+		<class>ni.com.casapellas.qs36f.entity.Invd736</class>
+		<class>ni.com.casapellas.qs36f.entity.Invd736PK</class>
+		<class>ni.com.casapellas.qs36f.entity.Invd73PK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotact</class>
+		<class>ni.com.casapellas.qs36f.entity.SotactPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotaut</class>
+		<class>ni.com.casapellas.qs36f.entity.SotautPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotcid</class>
+		<class>ni.com.casapellas.qs36f.entity.SotcidPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotcit</class>
+		<class>ni.com.casapellas.qs36f.entity.SotcitPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotcon</class>
+		<class>ni.com.casapellas.qs36f.entity.SotconPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotcso</class>
+		<class>ni.com.casapellas.qs36f.entity.SotcsoPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotcsr</class>
+		<class>ni.com.casapellas.qs36f.entity.SotcsrPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotkcsv</class>
+		<class>ni.com.casapellas.qs36f.entity.SotkcsvPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotmat</class>
+		<class>ni.com.casapellas.qs36f.entity.SotmatPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotmpc</class>
+		<class>ni.com.casapellas.qs36f.entity.SotmpcPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotord</class>
+		<class>ni.com.casapellas.qs36f.entity.SotordPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotreco</class>
+		<class>ni.com.casapellas.qs36f.entity.SotrecoPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sotta</class>
+		<class>ni.com.casapellas.qs36f.entity.SottaPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sottab</class>
+		<class>ni.com.casapellas.qs36f.entity.SottabPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Sottec</class>
+		<class>ni.com.casapellas.qs36f.entity.SottecPK</class>
+		<class>ni.com.casapellas.qs36f.entity.User</class>
+		<class>ni.com.casapellas.qs36f.entity.UserPK</class>
+		<class>ni.com.casapellas.qs36f.entity.VclientesGcp</class>
+		<class>ni.com.casapellas.qs36f.entity.VclientesGcpPK</class>
+		<class>ni.com.casapellas.qs36f.entity.Vtabmul</class>
+		<class>ni.com.casapellas.qs36f.entity.VtabmulPK</class>
+
+		    <properties>
+			   <property name="openjpa.ConnectionURL" value="jdbc:as400:192.168.1.3/QS36F;prompt=false"/>
+			   <property name="openjpa.ConnectionDriverName" value="com.ibm.as400.access.AS400JDBCDriver"/>
+			   <!-- <property name="openjpa.jdbc.DBDictionary" value="db2(supportsGetGeneratedKeys=false)"/>  --> 
+			   <property name="openjpa.ConnectionUserName" value="APPCP"/>
+			   <property name="openjpa.ConnectionPassword" value="APPCP1810"/>
+			</properties>
+	</persistence-unit>
+</persistence>

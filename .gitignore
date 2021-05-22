@@ -1,0 +1,101 @@
+.metadata
+#CP FOLDERS
+Java/
+liberty_server/
+CAJAEAR/
+GCPCANALESALTERNOSEJB/
+.DS_Store
+GCPINVENTARIOEJB/.svn/
+GCPINVENTARIOWSREST/.svn/
+GCPMCAJAEJB/.svn/
+GCPJPA/.svn/
+GCPMCAJAWSREST/.svn/
+GCPMCAJAEJB/
+GCPGENINFOEJB/
+GCPINVENTARIOEJB/.DS_Store
+GCPINVENTARIOEJB/ejbModule/.DS_Store
+GCPJDECXCEJB/
+GCPJPA/build/
+GCPMCAJAEJB/build/
+GCPJDEADDRESSBOOKEJB/
+GCPMCAJAWSEAR/
+GCPMCAJAWSREST/
+GCPQUIOSCOEAR/
+GCPQUIOSCOEJB/
+GCPQUIOSCOWSREST/
+GCPTALLEREJB/
+RemoteSystemsTempFiles/
+Servers/
+GCPINVENTARIOAPIKEY/
+GCPINVENTARIOEAR/
+GCPECOMMERCEEARE/
+E1GCPGENINFOEJB/
+E1GCPGENINFOWSREST/
+E1GCPJDECXCEJB/
+GCPAPIKEY/
+GCPCLIENTWS/
+GCPComponents/
+GCPDevelopmentTool/
+GCPECOMMERCE/
+GCPECOMMERCEEAR/
+GCPECOMMERCEEJB/
+GCPECOMMERCEJPA/
+GCPECOMMERCEWSREST/
+GCPGENINFOAPIKEY/
+GCPGENINFOEAR/
+GCPGENINFOWSREST/
+
+GCPINVENTARIOWSREST/WebContent/
+bin/
+tmp/
+GCPINVENTARIOEJB/build/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# PyDev specific (Python IDE for Eclipse)
+*.pydevproject
+
+# CDT-specific (C/C++ Development Tooling)
+.cproject
+
+# CDT- autotools 
+.autotools
+
+# Java annotation processor (APT)
+.factorypath
+
+# PDT-specific (PHP Development Tools)
+.buildpath
+
+# sbteclipse plugin
+.target
+
+# Tern plugin
+.tern-project
+
+# TeXlipse plugin
+.texlipse
+
+# STS (Spring Tool Suite)
+.springBeans
+
+# Code Recommenders
+.recommenders/
+
+# Scala IDE specific (Scala & Java development for Eclipse)
+.cache-main
+.scala_dependencies
+.worksheet
+
