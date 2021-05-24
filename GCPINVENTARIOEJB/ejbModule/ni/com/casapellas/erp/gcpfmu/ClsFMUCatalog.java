@@ -686,7 +686,7 @@ public class ClsFMUCatalog {
 			String sQuery = "";
 			String sWhere = "Where ";
 			
-			sWhere += notInClientIds.equals("") ? "z1zona=" + zoneId : "z1depart in " +  linesId  +  " AND aban8 not in " + notInClientIds + " AND z1zona!=''";
+			sWhere += " aban8 in " + notInClientIds;
 			
 			sQuery = "SELECT \n"
 		            + "\n"
@@ -702,13 +702,11 @@ public class ClsFMUCatalog {
 					+ "direccion.LONGITUD, " 
 					+ "z1depart departId, " 
 					+ "IFNULL((select AIHDAR from " + CollectionScheme.SchemeJDE + ".F03012  where AIAN8 = ABAN8), 'N') clientStatus,  "
-					
 					+ "z1compan companyId, " 
 					 + "CAST(TRIM(aitsta) AS VARCHAR(250) CCSID 37) creditCode, "
 					+ "CAST(TRIM(abcm) AS VARCHAR(250) CCSID 37) creditCodeCondition, "
 					+ "CAST(TRIM(aItrar) AS VARCHAR(250) CCSID 37)  termCode, "
 		            + "CAST(TRIM(Abtax) AS VARCHAR(20) CCSID 37) Identificacion2, \n"
-					+ queryZoneField
 		            + "CAST(TRIM(Abalph) AS VARCHAR(90) CCSID 37) NombreCliente, \n"
 		            + "CAST(TRIM(Abac19) AS VARCHAR(20) CCSID 37) CodSegmentoCliente, \n"
 		            + "CAST(TRIM(Abac07) AS VARCHAR(20) CCSID 37) CodCategoria7, \n"
