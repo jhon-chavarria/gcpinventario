@@ -219,7 +219,7 @@ public class ClsBillManager {
 									
 					if (!billPost.isExcludeCost()) {
 						updateProductCellarAvailable(em, totalAfterBill, productAvailability, billPost); 
-						updateTotalCost(em, totalGlobalCost, billPost, mathAction);
+						updateTotalCost(em, totalGlobalCost, billPost, mathAction, productCost.getUniqueCost());
 					}
 				
 				} catch (Exception e) {
@@ -341,6 +341,7 @@ public class ClsBillManager {
 		String sQuery = "";
 		
 		try {
+			
 			if (branchId.equals(FMUUtil.CPD_BRANCH_CODE)) {
 				
 				sQuery = "select "
@@ -443,16 +444,18 @@ public class ClsBillManager {
 	 * @param totalCost
 	 * @param billPost
 	 * @param mathAction
+	 * @param uniqueCost 
 	 * @return
 	 * @throws Exception
 	 */
-	private void updateTotalCost(EntityManager em, float totalCost, BillPost billPost, String mathAction) throws Exception {
+	private void updateTotalCost(EntityManager em, float totalCost, BillPost billPost, String mathAction, float uniqueCost) throws Exception {
 		try {
 			
 			String sQuery = null;
 			
-			String updateDailySell = "";
-
+			String updateDailySell = "";			
+			
+			
 			if (billPost.getBranchId().equals(FMUUtil.CPD_BRANCH_CODE)) {
 				
 				updateDailySell = " ivmesa = ivmesa " + mathAction +  " " + billPost.getBillQuantity();	
@@ -474,19 +477,30 @@ public class ClsBillManager {
 				
 				updateDailySell = ", SSVML00 = SSVML00 " + mathAction + " " + billPost.getBillQuantity();	
 				
+				System.out.println("Entro 1 : " +totalCost );
+				
+				String globalCostoLong = String.valueOf(totalCost).concat("000000");
+				String uniqueCostLong = String.valueOf(uniqueCost).concat("000000");
+
+				
 				sQuery = "UPDATE " + CollectionScheme.SchemeInventario + ".invd02 "
 						+ "set sscgl00 = ?, "
+						+ "SSCGl00NL = ?,  "
+						+ "SSCUL00NL = ?,  " 
 						+ "SSUSL00 = ?, "
-						+ "SSUFL00 = ?  " + updateDailySell
+						+ "SSUFL00 = ?  " 
+						+ updateDailySell
 						+ " where ssucurs = ? and sinopar = ? and SCOMPAN = ? ";		
 				
 				em.createNativeQuery(sQuery).
 						setParameter(1, totalCost).
-						setParameter(2, billPost.getDate()).
-						setParameter(3, billPost.getDate()).
-						setParameter(4, billPost.getBranchId()).
-						setParameter(5, billPost.getProductId()).
-						setParameter(6, billPost.getCompanyId()).
+						setParameter(2, globalCostoLong).
+						setParameter(3, uniqueCostLong).
+						setParameter(4, billPost.getDate()).
+						setParameter(5, billPost.getDate()).
+						setParameter(6, billPost.getBranchId()).
+						setParameter(7, billPost.getProductId()).
+						setParameter(8, billPost.getCompanyId()).
 						executeUpdate();
 			}
 		}
@@ -981,7 +995,7 @@ public class ClsBillManager {
 
 					+ " (Select  TRIM(czona) from  "+ CollectionScheme.SchemeInventario + ".invd43  where cclien = CLCLIE  and TRIM(czona)= '" + zoneId + "'  fetch first 1 rows only) zoneId,"
 					+ " (Select  CAST(NUMREC AS VARCHAR(25))  from " + CollectionScheme.SchemeCAJA + ".RECIBOFAC  where codcli = CLCLIE and numfac = DOCUME "
-							+ " AND  caid = (SELECT  cast(caid  as integer)   FROM " + CollectionScheme.SchemeCAJA + ".F55CA01 WHERE CACATI = " + sellerId + ")    AND estado ='' and "
+							+ " AND  caid = (SELECT  cast(caid  as integer)   FROM " + CollectionScheme.SchemeCAJA + ".F55CA01 WHERE CACATI = " + sellerId + " fetch first 1 rows only)    AND estado ='' and "
 							+ "		CODCOMP = (SELECT  IFNULL(TRIM(JDCOMPAN), '') FROM  " + CollectionScheme.SchemeInventario + ".invd00 WHERE CODTAB ='001' and nivel=4 and compan=a.COMPAN  and sucurs=a.SUCURS and depart=a.DEPART)  fetch first 1 rows only) receiptNumber"
 					
 					+ " from " + CollectionScheme.SchemeInventario + ".invd35 a left outer join " 

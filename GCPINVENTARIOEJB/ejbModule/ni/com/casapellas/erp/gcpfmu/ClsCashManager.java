@@ -46,7 +46,7 @@ import ni.com.casapellas.util.CollectionScheme;
 
 /**
  * 
- * @author jhon
+ * @author Jonathan
  *
  */
 
