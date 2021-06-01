@@ -226,8 +226,10 @@ public class ClsBillManager {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				
+				String uniqueCostLong = String.valueOf(productCost.getUniqueCost()).concat("000000");
 								
-				insertBill(em, billPost, batchNumber);	
+				insertBill(em, billPost, batchNumber, uniqueCostLong);	
 				
 				if (billPost.getDiscountCode() !=0) {
 					updateDiscountCode(em, billPost.getJdCompanyId(), billPost.getJdBranchId(), billPost.getTypeCode(), billPost.getUserId(),
@@ -641,7 +643,7 @@ public class ClsBillManager {
 	 * @param batchNumber 
 	 * @return
 	 */
-	private void insertBill(EntityManager em, BillPost billPost, int batchNumber) {
+	private void insertBill(EntityManager em, BillPost billPost, int batchNumber, String uniqueCostLong) {
 		try {
 
 			String sQuery = "INSERT INTO " + CollectionScheme.SchemeInventario + ".invd35 (" +
@@ -703,6 +705,7 @@ public class ClsBillManager {
 				"STATCV," +
 				"CVCANAL," +
 				"HCODCOMBO ," +
+				"HSCUL00NL ," +
 				"INDCT) " +
 				
 		"VALUES ('" + billPost.getCompanyId() + "', " +
@@ -764,6 +767,7 @@ public class ClsBillManager {
 			 		"'" +  billPost.getStatcv() + "', " +
 			 		"'" + "R" + "', " +
 			 		"'" +  billPost.getComboId() + "', " +
+			 		"" +  uniqueCostLong + ", " +
 			 		"'" + billPost.getIndct() + "')";
 	
 		 em.createNativeQuery(sQuery).executeUpdate();
