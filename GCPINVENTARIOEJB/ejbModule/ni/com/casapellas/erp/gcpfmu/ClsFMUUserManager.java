@@ -38,7 +38,7 @@ public class ClsFMUUserManager {
 	@EJB
 	private ClsFMUCatalog clsFMUCatalog;
 	
-	private String userAdmin = "PRUEBAE1PY";
+	private String userAdmin = "BIREYES";
 
 	
 	@Inject
