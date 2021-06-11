@@ -7,6 +7,8 @@ public class ProductCost {
 	private String categoryId;
 	private float uniqueCost;
 	private float globalCost;
+	private double globalCostLN;
+
 	private String productId;
 	
 	public String getCategoryId() {
@@ -44,6 +46,12 @@ public class ProductCost {
 	}
 	public void setProductId(String productId) {
 		this.productId = productId;
+	}
+	public double getGlobalCostLN() {
+		return globalCostLN;
+	}
+	public void setGlobalCostLN(double globalCostLN) {
+		this.globalCostLN = globalCostLN;
 	}
 	
 }

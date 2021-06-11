@@ -165,6 +165,8 @@ public class ClsBillManager {
 				float totalGlobalCost = 0;
 				
 				String mathAction = "";
+				String mathActionCostNL = "";
+
 				
 				// if is DEV		
 				if (!billPost.isExcludeCost()) {
@@ -174,12 +176,14 @@ public class ClsBillManager {
 						if (billPost.getTipoMo().equals(FMUUtil.CANCEL_BILL_CODE)) {
 							totalAfterBill = productAvailability.getAvailable() - billPost.getBillQuantity();
 							totalGlobalCost = productCost.getGlobalCost() - billPost.getVALORG();
-							mathAction = "+";
+							mathAction = "+"; 
+							mathActionCostNL = "-";
 							updateOriginalBillReturnQuantity(em, billPost, "-");
 						} else {
 							totalAfterBill = productAvailability.getAvailable() + billPost.getBillQuantity();
 							totalGlobalCost = productCost.getGlobalCost() + billPost.getVALORG();
 							mathAction = "-";
+							mathActionCostNL = "+";
 							updateOriginalBillReturnQuantity(em, billPost, "+");
 						}
 					
@@ -190,10 +194,13 @@ public class ClsBillManager {
 						if (billPost.getTipoMo().equals(FMUUtil.CANCEL_BILL_CODE)) {
 							totalAfterBill = productAvailability.getAvailable() + billPost.getBillQuantity();
 							mathAction = "-";
+							mathActionCostNL = "+";
 							totalGlobalCost = productCost.getGlobalCost() + billPost.getVALORG();
 						} else {
+							// is bill
 							totalAfterBill = productAvailability.getAvailable() - billPost.getBillQuantity();
 							mathAction = "+";
+							mathActionCostNL = "-";
 							totalGlobalCost = productCost.getGlobalCost() - billPost.getVALORG();
 						}			
 					}
@@ -219,17 +226,18 @@ public class ClsBillManager {
 									
 					if (!billPost.isExcludeCost()) {
 						updateProductCellarAvailable(em, totalAfterBill, productAvailability, billPost); 
-						updateTotalCost(em, totalGlobalCost, billPost, mathAction, productCost.getUniqueCost());
+						updateTotalCost(em, totalGlobalCost, billPost, mathAction, productCost, mathActionCostNL);
 					}
 				
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+										
 				
-				String uniqueCostLong = String.valueOf(productCost.getUniqueCost()).concat("000000");
-								
-				insertBill(em, billPost, batchNumber, uniqueCostLong);	
+				ProductCost productCostAfterUpdated = getProductCost(em, billPost.getCompanyId(), billPost.getProductId(), billPost.getBranchId());
+
+				insertBill(em, billPost, batchNumber, productCostAfterUpdated);	
 				
 				if (billPost.getDiscountCode() !=0) {
 					updateDiscountCode(em, billPost.getJdCompanyId(), billPost.getJdBranchId(), billPost.getTypeCode(), billPost.getUserId(),
@@ -366,7 +374,9 @@ public class ClsBillManager {
 				 		+ "a.sinopar productId, "
 				 		+ "IFNULL(b.icateg,'') categoryId, "
 				 		+ "a.sscul00 uniqueCost, "
-				 		+ "a.sscgl00 globalCost "
+				 		+ "a.sscgl00 globalCost, "
+				 		+ "a.sscul00nl globalCostLN "
+
 							
 				 		+ "from " + CollectionScheme.SchemeInventario + ".invd02 a "
 									+ "left outer join " + table + " b on "
@@ -450,7 +460,7 @@ public class ClsBillManager {
 	 * @return
 	 * @throws Exception
 	 */
-	private void updateTotalCost(EntityManager em, float totalCost, BillPost billPost, String mathAction, float uniqueCost) throws Exception {
+	private void updateTotalCost(EntityManager em, float totalCost, BillPost billPost, String mathAction, ProductCost productCost, String mathActionCostNl) throws Exception {
 		try {
 			
 			String sQuery = null;
@@ -478,17 +488,25 @@ public class ClsBillManager {
 				}
 				
 				updateDailySell = ", SSVML00 = SSVML00 " + mathAction + " " + billPost.getBillQuantity();	
-				
-				System.out.println("Entro 1 : " +totalCost );
-				
-				String globalCostoLong = String.valueOf(totalCost).concat("000000");
-				String uniqueCostLong = String.valueOf(uniqueCost).concat("000000");
+			
 
+				//String globalCostoLong = String.valueOf(totalCost).concat("000000");
+				//String uniqueCostLong = String.valueOf(productCost.getUniqueCost()).concat("000000");
+				
+				//float globalCostQuantity = new BigDecimal(format.format(billPost.getBillQuantity())).multiply(
+				//		new BigDecimal(productCost.getGlobalCostLN())).floatValue();
+				
+				
+				double globalCostQuantity = billPost.getBillQuantity() * productCost.getGlobalCostLN();
+				
+				String updateCostTotal = "SSCGl00NL = SSCGl00NL " + mathActionCostNl + " " + globalCostQuantity;	
+							
 				
 				sQuery = "UPDATE " + CollectionScheme.SchemeInventario + ".invd02 "
-						+ "set sscgl00 = ?, "
-						+ "SSCGl00NL = ?,  "
-						+ "SSCUL00NL = ?,  " 
+						+ "set SSCGl00 = ?, "
+						//+ "SSCGl00NL = ?,  "
+						+ updateCostTotal + ", "
+						//+ "SSCUL00NL = ?,  " 
 						+ "SSUSL00 = ?, "
 						+ "SSUFL00 = ?  " 
 						+ updateDailySell
@@ -496,14 +514,16 @@ public class ClsBillManager {
 				
 				em.createNativeQuery(sQuery).
 						setParameter(1, totalCost).
-						setParameter(2, globalCostoLong).
-						setParameter(3, uniqueCostLong).
-						setParameter(4, billPost.getDate()).
-						setParameter(5, billPost.getDate()).
-						setParameter(6, billPost.getBranchId()).
-						setParameter(7, billPost.getProductId()).
-						setParameter(8, billPost.getCompanyId()).
+						//setParameter(2, updateCostTotal).
+						//setParameter(3, uniqueCostLong).
+						setParameter(2, billPost.getDate()).
+						setParameter(3, billPost.getDate()).
+						setParameter(4, billPost.getBranchId()).
+						setParameter(5, billPost.getProductId()).
+						setParameter(6, billPost.getCompanyId()).
 						executeUpdate();
+				
+				productCost.setGlobalCostLN(globalCostQuantity);
 			}
 		}
 		
@@ -643,7 +663,7 @@ public class ClsBillManager {
 	 * @param batchNumber 
 	 * @return
 	 */
-	private void insertBill(EntityManager em, BillPost billPost, int batchNumber, String uniqueCostLong) {
+	private void insertBill(EntityManager em, BillPost billPost, int batchNumber, ProductCost productCost) {
 		try {
 
 			String sQuery = "INSERT INTO " + CollectionScheme.SchemeInventario + ".invd35 (" +
@@ -767,7 +787,7 @@ public class ClsBillManager {
 			 		"'" +  billPost.getStatcv() + "', " +
 			 		"'" + "R" + "', " +
 			 		"'" +  billPost.getComboId() + "', " +
-			 		"" +  uniqueCostLong + ", " +
+			 		"" +  productCost.getGlobalCostLN() + ", " +
 			 		"'" + billPost.getIndct() + "')";
 	
 		 em.createNativeQuery(sQuery).executeUpdate();
