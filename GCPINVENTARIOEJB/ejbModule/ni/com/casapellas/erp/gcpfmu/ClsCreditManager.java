@@ -12,7 +12,6 @@ import javax.ejb.Singleton;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 
-
 import ni.com.casapellas.gcpfmu.pojo.AccountCash;
 import ni.com.casapellas.gcpfmu.pojo.BillPost;
 import ni.com.casapellas.gcpfmu.pojo.CashBillReceiptRelation;
@@ -64,6 +63,39 @@ public class ClsCreditManager {
 
 	}
 
+	private void fixCorAmount03B11(ClientCreditInfo clientCreditInfoItem, EntityManager em) {
+		
+		String sQuery = "Select RPAG batchNumber, RPATXA jdeNumber, RPSTAM clientId  FROM " + CollectionScheme.SchemeJDE
+				+ ".F03B11 " + "where RPAN8 = " + clientCreditInfoItem.getClientId() + " " + " AND TRIM(RPSFX) = '"
+				+ clientCreditInfoItem.getFee() + "'  " + "and RPDOC = " + clientCreditInfoItem.getBillId()
+				+ " AND RPDCT='" + clientCreditInfoItem.getDocumentType() + "' " + " AND RPKCO = '"
+				+ clientCreditInfoItem.getBranchId() + "'";
+
+		PostObjectReturn postObjectReturn = new PostObjectReturn();
+
+		postObjectReturn = (PostObjectReturn) em.createNativeQuery(sQuery, PostObjectReturn.class).getSingleResult();
+
+		if (postObjectReturn != null) {
+
+			System.out.println("Entro datis " + postObjectReturn.getBatchNumber());
+			System.out.println("Entro datis " + postObjectReturn.getJdeNumber());
+			System.out.println("Entro datis " + postObjectReturn.getClientId());
+
+			if ((postObjectReturn.getJdeNumber() + postObjectReturn.getClientId()) != postObjectReturn.getClientId()) {
+				int newValue = postObjectReturn.getJdeNumber() + postObjectReturn.getClientId();
+				String sql = " RPAG = " + newValue;
+
+				String sQueryUpdate = "UPDATE " + CollectionScheme.SchemeJDE + ".F03B11 set " + sql + "  "
+						+ "where RPAN8 = " + clientCreditInfoItem.getClientId() + " " + " AND TRIM(RPSFX) = '"
+						+ clientCreditInfoItem.getFee() + "'  " + "and RPDOC = " + clientCreditInfoItem.getBillId()
+						+ " AND RPDCT='" + clientCreditInfoItem.getDocumentType() + "' " + " AND RPKCO = '"
+						+ clientCreditInfoItem.getBranchId() + "'";
+
+				em.createNativeQuery(sQueryUpdate).executeUpdate();
+			}
+		}
+	}
+
 	public void createCreditBillRow(int idJsonLog, EntityManager em, int feedAmount, int dayLimits, int cashId,
 			List<ClientCreditInfo> creditInfos, String userId, String softwareId, BillPost boBillPost,
 			int batchNumber) {
@@ -80,9 +112,8 @@ public class ClsCreditManager {
 
 		float subtotal = boBillPost.getSubtotal();
 		float subtotalCr = boBillPost.getSubtotalCR();
-		
-		if (feedAmount == 0 && !boBillPost.getConditionType().equals(FMUUtil.DEV_CREDIT_LETTER)) {
 
+		if (feedAmount == 0 && !boBillPost.getConditionType().equals(FMUUtil.DEV_CREDIT_LETTER)) {
 			queryValues += "\n";
 			queryValues += createF03B11ValuesArray(clientCreditInfoItem.getBranchId(),
 					clientCreditInfoItem.getDocumentType(), clientCreditInfoItem.getBillId(),
@@ -102,7 +133,7 @@ public class ClsCreditManager {
 
 			subtotal = 0;
 			subtotalCr = 0;
-			
+
 			for (ClientCreditInfo clientCreditInfo : creditInfos) {
 
 				queryValues += "\n";
@@ -118,9 +149,9 @@ public class ClsCreditManager {
 						clientType);
 
 				queryValues += ",\n";
-				
-				subtotal+=clientCreditInfo.getDrImporteNotIva();
-				subtotalCr+=clientCreditInfo.getCorImporteNotIva();
+
+				subtotal += clientCreditInfo.getDrImporteNotIva();
+				subtotalCr += clientCreditInfo.getCorImporteNotIva();
 
 			}
 		}
@@ -133,9 +164,15 @@ public class ClsCreditManager {
 			try {
 				int row = em.createNativeQuery(completeQuery).executeUpdate();
 				if (row > 0) {
-					createAccountDetail(idJsonLog, em, creditInfos.get(0), batchNumber, subtotalCr,
-							subtotal, cashId, userId, accountCash, softwareId);
+					createAccountDetail(idJsonLog, em, creditInfos.get(0), batchNumber, subtotalCr, subtotal, cashId,
+							userId, accountCash, softwareId);
 				}
+				
+				// check and fix amounts
+				if (feedAmount == 0 && !boBillPost.getConditionType().equals(FMUUtil.DEV_CREDIT_LETTER)) {
+					fixCorAmount03B11(clientCreditInfoItem, em);
+				}
+
 			} catch (Exception e) {
 				// TODO: handle exception
 				ClsBillManager.setErrorMsg(e.getMessage());
@@ -277,20 +314,19 @@ public class ClsCreditManager {
 		return clientType.getCreditAccount();
 
 	}
-	
-	public  static ExchangeRate getActualExchangeRate(EntityManager em, String date) {
-		ExchangeRate ex = null;	
-		try { 
-			
-			String sQueryPrices = "SELECT cxcrrd currentCRExchange, "
-					+ "( select tcambiom from " + CollectionScheme.SchemeCAJA + ".TPARARELA ) "
-					+ "parallelRate from " + CollectionScheme.SchemeJDE + ".f0015 "
-					+ "where cxcrcd='COR'  and cxcrdc='USD' and cxeft = ?";
-						
-			List<ExchangeRate> exchangeRates =  em.createNativeQuery(sQueryPrices, ExchangeRate.class).setParameter(1, date).getResultList();
+
+	public static ExchangeRate getActualExchangeRate(EntityManager em, String date) {
+		ExchangeRate ex = null;
+		try {
+
+			String sQueryPrices = "SELECT cxcrrd currentCRExchange, " + "( select tcambiom from "
+					+ CollectionScheme.SchemeCAJA + ".TPARARELA ) " + "parallelRate from " + CollectionScheme.SchemeJDE
+					+ ".f0015 " + "where cxcrcd='COR'  and cxcrdc='USD' and cxeft = ?";
+
+			List<ExchangeRate> exchangeRates = em.createNativeQuery(sQueryPrices, ExchangeRate.class)
+					.setParameter(1, date).getResultList();
 			ex = exchangeRates.get(0);
-		}
-		catch (Exception e) {			 
+		} catch (Exception e) {
 			e.printStackTrace();
 			ex = new ExchangeRate();
 			ex.setCurrentCRExchange(0);
@@ -299,10 +335,6 @@ public class ClsCreditManager {
 		return ex;
 
 	}
-	
-	
-	
-	
 
 	public static void createReceiptDetail(int idJsonLog, EntityManager em,
 			List<CashBillReceiptRelation> cashBillReceiptRelations,
@@ -315,9 +347,9 @@ public class ClsCreditManager {
 		float totalBatch = 0;
 		List<String> vaList = new ArrayList<String>();
 
-		ExchangeRate excrt = getActualExchangeRate(em, String.valueOf( FMUUtil.dateToJulian(new SimpleDateFormat("yyyy-MM-dd").format(new Date())) ) );
-		 
-				
+		ExchangeRate excrt = getActualExchangeRate(em,
+				String.valueOf(FMUUtil.dateToJulian(new SimpleDateFormat("yyyy-MM-dd").format(new Date()))));
+
 		// update amount
 		for (CashReceiptPaymentItem cashReceiptPaymentItem : cashReceiptPaymentItems) {
 			cashReceiptPaymentItem.setEquivalent(new BigDecimal(format.format(cashReceiptPaymentItem.getEquivalent()))
@@ -365,7 +397,7 @@ public class ClsCreditManager {
 					float amountDr = 0;
 
 					if (cashReceipt.getCoin().equals(FMUUtil.US_COIN_ID)) {
-						
+
 						/*
 						 * if( cashBillReceiptRelations.size() == 1 && cashReceiptPaymentItems.size() ==
 						 * 1 && cashBillReceiptRelation.isCancelCompleteBill() &&
@@ -389,64 +421,62 @@ public class ClsCreditManager {
 						 * 
 						 * else
 						 */
-								if (cashBillReceiptRelations.size() == 1 && cashReceiptPaymentItems.size() == 1
+						if (cashBillReceiptRelations.size() == 1 && cashReceiptPaymentItems.size() == 1
 								&& cashBillReceiptRelation.isCancelCompleteBill()) {
-								
-								
-								//amountCr = cashBillReceiptRelation.getCrBalance();
-								
-								
-								amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal("100")).floatValue());
-								
-								amountCr = (new BigDecimal(format.format(amountCr))
-										.multiply(new BigDecimal(cashBillReceiptRelation.getCalculatedExchange()))
-										.floatValue());
-	
-								amountCr = (new BigDecimal(format.format(amountCr)).multiply(new BigDecimal(100))
-										.floatValue());
-	
-								amountCr = new BigDecimal(format.format(amountCr)).floatValue();
-								
-								
-								
-								
-							} else {
-								amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal(100)).floatValue());
-	
-								amountCr = (new BigDecimal(format.format(amountCr))
-										.multiply(new BigDecimal(cashBillReceiptRelation.getCalculatedExchange()))
-										.floatValue());
-	
-								amountCr = (new BigDecimal(format.format(amountCr)).multiply(new BigDecimal(100))
-										.floatValue());
-	
-								amountCr = new BigDecimal(format.format(amountCr)).floatValue();
-							}
+
+							// amountCr = cashBillReceiptRelation.getCrBalance();
+
+							amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal("100"))
+									.floatValue());
+
+							amountCr = (new BigDecimal(format.format(amountCr))
+									.multiply(new BigDecimal(cashBillReceiptRelation.getCalculatedExchange()))
+									.floatValue());
+
+							amountCr = (new BigDecimal(format.format(amountCr)).multiply(new BigDecimal(100))
+									.floatValue());
+
+							amountCr = new BigDecimal(format.format(amountCr)).floatValue();
+
+						} else {
+							amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal(100)).floatValue());
+
+							amountCr = (new BigDecimal(format.format(amountCr))
+									.multiply(new BigDecimal(cashBillReceiptRelation.getCalculatedExchange()))
+									.floatValue());
+
+							amountCr = (new BigDecimal(format.format(amountCr)).multiply(new BigDecimal(100))
+									.floatValue());
+
+							amountCr = new BigDecimal(format.format(amountCr)).floatValue();
+						}
 
 						amountDr = total;
-											
-						//------------------------------------------------------------------------------------------------------
-						//----------- calcular el diferencial cambiario.
+
+						// ------------------------------------------------------------------------------------------------------
+						// ----------- calcular el diferencial cambiario.
 						BigDecimal montoTasaFechaActual = new BigDecimal(String.valueOf(amountCr));
-						BigDecimal montoTasaFechaFactura = new BigDecimal (String.valueOf( cashBillReceiptRelation.getBillExchangeAmountGainLoss() ) ) ;						
-						montoTasaFechaFactura = montoTasaFechaFactura.multiply(new BigDecimal(String.valueOf(amountDr))).setScale(2, RoundingMode.HALF_UP);
-												
+						BigDecimal montoTasaFechaFactura = new BigDecimal(
+								String.valueOf(cashBillReceiptRelation.getBillExchangeAmountGainLoss()));
+						montoTasaFechaFactura = montoTasaFechaFactura.multiply(new BigDecimal(String.valueOf(amountDr)))
+								.setScale(2, RoundingMode.HALF_UP);
+
 						BigDecimal diferencialCambiario = montoTasaFechaActual.subtract(montoTasaFechaFactura);
-						
-						if(diferencialCambiario.compareTo(BigDecimal.ZERO) != 0){							
-							cashBillReceiptRelation.setAccountPart3(diferencialCambiario.toString() );	
-							
+
+						if (diferencialCambiario.compareTo(BigDecimal.ZERO) != 0) {
+							cashBillReceiptRelation.setAccountPart3(diferencialCambiario.toString());
+
 							String query1 = cashBillReceiptRelation.getJdLineId();
 							String query2 = "66000";
 							String query3 = "01";
 
-							AccountCash accountCashSurplus = ClsAccountingManager.getSurplusAccount(em, query1, query2, query3);
+							AccountCash accountCashSurplus = ClsAccountingManager.getSurplusAccount(em, query1, query2,
+									query3);
 							cashBillReceiptRelation.setAccount(accountCashSurplus.getAccount());
 
 						}
-						//------------------------------------------------------------------------------------------------------
-						
-						
+						// ------------------------------------------------------------------------------------------------------
+
 					}
 
 					queryDetailValues += "\n";
@@ -464,9 +494,7 @@ public class ClsCreditManager {
 							Integer.parseInt(cashBillReceiptRelation.getAccountPart2()),
 							cashBillReceiptRelation.getAccount(), cashBillReceiptRelation.getAccountPart3(),
 							cashBillReceiptRelation.isCancelCompleteBill(), cashReceipt.getReceiptNumber(),
-							clientType.getA5ar(),
-							cashBillReceiptRelation.getBillExchangeAmountGainLoss()
-							);
+							clientType.getA5ar(), cashBillReceiptRelation.getBillExchangeAmountGainLoss());
 
 					queryDetailValues += ",\n";
 					sequenceNumberItem++;
@@ -486,7 +514,7 @@ public class ClsCreditManager {
 					float amountDr = 0;
 
 					if (cashReceipt.getCoin().equals(FMUUtil.US_COIN_ID)) {
-							
+
 						amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal(100)).floatValue());
 
 						amountCr = (new BigDecimal(format.format(amountCr))
@@ -497,27 +525,31 @@ public class ClsCreditManager {
 
 						amountDr = total;
 
-						//------------------------------------------------------------------------------------------------------
-						//----------- calcular el diferencial cambiario.
+						// ------------------------------------------------------------------------------------------------------
+						// ----------- calcular el diferencial cambiario.
 						BigDecimal montoTasaFechaActual = new BigDecimal(String.valueOf(amountCr));
-						BigDecimal montoTasaFechaFactura = new BigDecimal (String.valueOf( cashBillReceiptRelation.getBillExchangeAmountGainLoss() ) ) ;						
-						montoTasaFechaFactura = montoTasaFechaFactura.multiply(new BigDecimal(String.valueOf(amountDr))).setScale(2, RoundingMode.HALF_UP);
-												
-						BigDecimal diferencialCambiario = montoTasaFechaActual.subtract(montoTasaFechaFactura).setScale(2, RoundingMode.HALF_UP);
-						
-						if(diferencialCambiario.compareTo(BigDecimal.ZERO) != 0){							
-							cashBillReceiptRelation.setAccountPart3(diferencialCambiario.toString() );	
-							
+						BigDecimal montoTasaFechaFactura = new BigDecimal(
+								String.valueOf(cashBillReceiptRelation.getBillExchangeAmountGainLoss()));
+						montoTasaFechaFactura = montoTasaFechaFactura.multiply(new BigDecimal(String.valueOf(amountDr)))
+								.setScale(2, RoundingMode.HALF_UP);
+
+						BigDecimal diferencialCambiario = montoTasaFechaActual.subtract(montoTasaFechaFactura)
+								.setScale(2, RoundingMode.HALF_UP);
+
+						if (diferencialCambiario.compareTo(BigDecimal.ZERO) != 0) {
+							cashBillReceiptRelation.setAccountPart3(diferencialCambiario.toString());
+
 							String query1 = cashBillReceiptRelation.getJdLineId();
 							String query2 = "66000";
 							String query3 = "01";
 
-							AccountCash accountCashSurplus = ClsAccountingManager.getSurplusAccount(em, query1, query2, query3);
+							AccountCash accountCashSurplus = ClsAccountingManager.getSurplusAccount(em, query1, query2,
+									query3);
 							cashBillReceiptRelation.setAccount(accountCashSurplus.getAccount());
 
 						}
-						//------------------------------------------------------------------------------------------------------
-						
+						// ------------------------------------------------------------------------------------------------------
+
 					}
 
 					queryDetailValues += createF03B14ValuesArray(sequenceNumber, cashBillReceiptRelation.getBillId(),
@@ -534,9 +566,7 @@ public class ClsCreditManager {
 							Integer.parseInt(cashBillReceiptRelation.getAccountPart2()),
 							cashBillReceiptRelation.getAccount(), cashBillReceiptRelation.getAccountPart3(),
 							cashBillReceiptRelation.isCancelCompleteBill(), cashReceipt.getReceiptNumber(),
-							clientType.getA5ar(),
-							cashBillReceiptRelation.getBillExchangeAmountGainLoss()
-							);
+							clientType.getA5ar(), cashBillReceiptRelation.getBillExchangeAmountGainLoss());
 
 					cashBillReceiptRelation
 							.setAmount(cashBillReceiptRelation.getAmount() - cashReceiptPaymentItem.getEquivalent());
@@ -560,9 +590,10 @@ public class ClsCreditManager {
 						if (cashBillReceiptRelations.size() == 1 && cashReceiptPaymentItems.size() == 1
 								&& cashBillReceiptRelation.isCancelCompleteBill()) {
 
-								//amountCr = cashBillReceiptRelation.getCrBalance();
-								
-							amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal("100")).floatValue());
+							// amountCr = cashBillReceiptRelation.getCrBalance();
+
+							amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal("100"))
+									.floatValue());
 
 							amountCr = (new BigDecimal(format.format(amountCr))
 									.multiply(new BigDecimal(cashBillReceiptRelation.getCalculatedExchange()))
@@ -570,9 +601,7 @@ public class ClsCreditManager {
 
 							amountCr = (new BigDecimal(format.format(amountCr)).multiply(new BigDecimal(100))
 									.floatValue());
-							
-							
-							
+
 						} else {
 
 							amountCr = (new BigDecimal(format.format(total)).divide(new BigDecimal(100)).floatValue());
@@ -585,29 +614,32 @@ public class ClsCreditManager {
 									.floatValue());
 						}
 						amountDr = total;
-						
-						//------------------------------------------------------------------------------------------------------
-						//----------- calcular el diferencial cambiario.
-						
+
+						// ------------------------------------------------------------------------------------------------------
+						// ----------- calcular el diferencial cambiario.
+
 						BigDecimal montoTasaFechaActual = new BigDecimal(String.valueOf(amountCr));
-						BigDecimal montoTasaFechaFactura = new BigDecimal (String.valueOf( cashBillReceiptRelation.getBillExchangeAmountGainLoss() ) ) ;						
-						montoTasaFechaFactura = montoTasaFechaFactura.multiply(new BigDecimal(String.valueOf(amountDr))).setScale(2, RoundingMode.HALF_UP);
-												
+						BigDecimal montoTasaFechaFactura = new BigDecimal(
+								String.valueOf(cashBillReceiptRelation.getBillExchangeAmountGainLoss()));
+						montoTasaFechaFactura = montoTasaFechaFactura.multiply(new BigDecimal(String.valueOf(amountDr)))
+								.setScale(2, RoundingMode.HALF_UP);
+
 						BigDecimal diferencialCambiario = montoTasaFechaActual.subtract(montoTasaFechaFactura);
-						
-						if(diferencialCambiario.compareTo(BigDecimal.ZERO) != 0){							
-							cashBillReceiptRelation.setAccountPart3(diferencialCambiario.toString() );		
-							
+
+						if (diferencialCambiario.compareTo(BigDecimal.ZERO) != 0) {
+							cashBillReceiptRelation.setAccountPart3(diferencialCambiario.toString());
+
 							String query1 = cashBillReceiptRelation.getJdLineId();
 							String query2 = "66000";
 							String query3 = "01";
 
-							AccountCash accountCashSurplus = ClsAccountingManager.getSurplusAccount(em, query1, query2, query3);
+							AccountCash accountCashSurplus = ClsAccountingManager.getSurplusAccount(em, query1, query2,
+									query3);
 							cashBillReceiptRelation.setAccount(accountCashSurplus.getAccount());
 
 						}
-						//------------------------------------------------------------------------------------------------------	
-						
+						// ------------------------------------------------------------------------------------------------------
+
 					}
 
 					queryDetailValues += createF03B14ValuesArray(sequenceNumber, cashBillReceiptRelation.getBillId(),
@@ -624,9 +656,7 @@ public class ClsCreditManager {
 							Integer.parseInt(cashBillReceiptRelation.getAccountPart2()),
 							cashBillReceiptRelation.getAccount(), cashBillReceiptRelation.getAccountPart3(),
 							cashBillReceiptRelation.isCancelCompleteBill(), cashReceipt.getReceiptNumber(),
-							clientType.getA5ar(),
-							cashBillReceiptRelation.getBillExchangeAmountGainLoss()
-							);
+							clientType.getA5ar(), cashBillReceiptRelation.getBillExchangeAmountGainLoss());
 
 					queryDetailValues += ",\n";
 
@@ -687,15 +717,13 @@ public class ClsCreditManager {
 						}
 					}
 					/*
-					// check RG
-					for (CashBillReceiptRelation cashBillReceiptRelation : cashBillReceiptRelations) {
-						if (cashBillReceiptRelation.isCancelCompleteBill()
-								&& cashBillReceiptRelation.getCoin().equals(FMUUtil.US_COIN_ID)) {
-							setRGCreditBill(cashBillReceiptRelation, em,
-									cashReceiptPaymentItems.get(cashReceiptPaymentItems.size() - 1));
-						}
-					}
-					*/
+					 * // check RG for (CashBillReceiptRelation cashBillReceiptRelation :
+					 * cashBillReceiptRelations) { if
+					 * (cashBillReceiptRelation.isCancelCompleteBill() &&
+					 * cashBillReceiptRelation.getCoin().equals(FMUUtil.US_COIN_ID)) {
+					 * setRGCreditBill(cashBillReceiptRelation, em,
+					 * cashReceiptPaymentItems.get(cashReceiptPaymentItems.size() - 1)); } }
+					 */
 				}
 
 			} catch (Exception e) {
@@ -718,10 +746,10 @@ public class ClsCreditManager {
 
 		try {
 			// Get receives, total y tasa de cambio
-			String sQueryTotal = "select " + "RZPAAP price, " + "RZCRR iva " + "FROM "
-					+ CollectionScheme.SchemeJDE + ".F03B14 " + "where RZAN8 = " + cashBillReceiptRelation.getCodCli()
-					+ " and RZDOC = " + cashBillReceiptRelation.getBillId() + " AND  TRIM(RZSFX) = '"
-					+ cashBillReceiptRelation.getFee() + "' AND RZDCT='" + cashBillReceiptRelation.getBillType() + "'";
+			String sQueryTotal = "select " + "RZPAAP price, " + "RZCRR iva " + "FROM " + CollectionScheme.SchemeJDE
+					+ ".F03B14 " + "where RZAN8 = " + cashBillReceiptRelation.getCodCli() + " and RZDOC = "
+					+ cashBillReceiptRelation.getBillId() + " AND  TRIM(RZSFX) = '" + cashBillReceiptRelation.getFee()
+					+ "' AND RZDCT='" + cashBillReceiptRelation.getBillType() + "'";
 
 			postObjectReturns = em.createNativeQuery(sQueryTotal, GlobalProductCatalog.class).getResultList();
 
@@ -731,13 +759,15 @@ public class ClsCreditManager {
 			// float
 			for (GlobalProductCatalog postItem : postObjectReturns) {
 				float amount = Math.abs(postItem.getPrice());
-				//total += new BigDecimal(amount).multiply(new BigDecimal(postItem.getIva())).floatValue();
+				// total += new BigDecimal(amount).multiply(new
+				// BigDecimal(postItem.getIva())).floatValue();
 				total += amount;
 			}
 
-			//totalSum = new BigDecimal(format.format(total)).multiply(new BigDecimal(100)).intValue();
+			// totalSum = new BigDecimal(format.format(total)).multiply(new
+			// BigDecimal(100)).intValue();
 			totalSum = total;
-			
+
 			// Se agrega la sucursal, para evitar duplicados de cuentas por cobrar
 			String sQuery = "Select RPAG batchNumber FROM " + CollectionScheme.SchemeJDE + ".F03B11 " + "where RPAN8 = "
 					+ cashBillReceiptRelation.getCodCli() + " " + " AND TRIM(RPSFX) = '"
@@ -753,7 +783,7 @@ public class ClsCreditManager {
 			}
 
 			int totalRg = 0;
-			
+
 			System.out.println("Entro sum 1 " + totalSum);
 			System.out.println("Entro sum 2 " + totalBill);
 
@@ -790,11 +820,9 @@ public class ClsCreditManager {
 	public static void updatePendingAmount(int idJsonLog, EntityManager em, CashReceipt cashReceipt,
 			List<CashBillReceiptRelation> cashBillReceiptRelations, int batchNumber) {
 
-		String totalAppliedInDetailReceipt = 
-				" (select ABS(sum(f.rzpaap) + sum(f.rzagl)) "
-				+ "from @JDEDTA.f03b14 f "
-				+ "where rzdoc = '@RZDOC' and rzan8 = '@RZAN8' and rzicu = '@RZICU' )" ;
-		
+		String totalAppliedInDetailReceipt = " (select ABS(sum(f.rzpaap) + sum(f.rzagl)) " + "from @JDEDTA.f03b14 f "
+				+ "where rzdoc = '@RZDOC' and rzan8 = '@RZAN8' and rzicu = '@RZICU' )";
+
 		for (CashBillReceiptRelation cashBillReceiptRelation : cashBillReceiptRelations) {
 
 			float total = new BigDecimal(cashBillReceiptRelation.getAmount()).floatValue();
@@ -806,31 +834,28 @@ public class ClsCreditManager {
 			String drSql = "";
 //			String drY = ""; 	
 
-			String amountToSubtrack = totalAppliedInDetailReceipt
-						.replace("@JDEDTA",  CollectionScheme.SchemeJDE )
-						.replace("@RZDOC", String.valueOf( cashBillReceiptRelation.getBillId() ) )
-						.replace("@RZAN8", String.valueOf( cashBillReceiptRelation.getCodCli() ) )
-						.replace("@RZICU", String.valueOf(batchNumber) );			
-			
-			boolean checkDomesticPendingAmount =  
-					cashReceipt.getCoin().compareTo(FMUUtil.US_COIN_ID) == 0 &&
-					cashBillReceiptRelation.isCancelCompleteBill();			
-			
-			String drY = ", RPPST = 'A'"; 
-			
+			String amountToSubtrack = totalAppliedInDetailReceipt.replace("@JDEDTA", CollectionScheme.SchemeJDE)
+					.replace("@RZDOC", String.valueOf(cashBillReceiptRelation.getBillId()))
+					.replace("@RZAN8", String.valueOf(cashBillReceiptRelation.getCodCli()))
+					.replace("@RZICU", String.valueOf(batchNumber));
+
+			boolean checkDomesticPendingAmount = cashReceipt.getCoin().compareTo(FMUUtil.US_COIN_ID) == 0
+					&& cashBillReceiptRelation.isCancelCompleteBill();
+
+			String drY = ", RPPST = 'A'";
+
 			if (cashReceipt.getCoin().equals(FMUUtil.US_COIN_ID)) {
-				
+
 				amountCr = new BigDecimal(cashBillReceiptRelation.getCrAmount()).floatValue();
 				amountDr = total;
-				
+
 				crSql = "RPAAP = ( RPAAP - " + amountToSubtrack + ")";
 				drSql = "RPFAP = (RPFAP - " + amountDr + "),";
-				
-		
+
 				if (cashBillReceiptRelation.isCancelCompleteBill()) {
 					drSql = "RPFAP = 0,";
-					//crSql = "RPAAP = 0";
-					 drY = ", RPPST = 'P'";
+					// crSql = "RPAAP = 0";
+					drY = ", RPPST = 'P'";
 				}
 
 			} else {
@@ -838,7 +863,8 @@ public class ClsCreditManager {
 				crSql = "RPAAP = ( RPAAP - " + amountCr + ")";
 			}
 
-			//String drY = ", RPPST = (CASE WHEN ( RPAAP - " + amountCr + ") = 0.0 THEN 'P' ELSE 'A' END )";
+			// String drY = ", RPPST = (CASE WHEN ( RPAAP - " + amountCr + ") = 0.0 THEN 'P'
+			// ELSE 'A' END )";
 
 			try {
 				String sQuery = "UPDATE " + CollectionScheme.SchemeJDE + ".F03B11 " + "set " + drSql + " " + crSql
@@ -846,19 +872,17 @@ public class ClsCreditManager {
 						+ cashBillReceiptRelation.getJdBranchId() + "' and TRIM(RPDCT) = '"
 						+ cashBillReceiptRelation.getBillType() + "'  AND TRIM(RPSFX) = '"
 						+ cashBillReceiptRelation.getFee() + "'";
-				
+
 				System.out.println("query update f03b11 " + sQuery);
 
 				int rows = em.createNativeQuery(sQuery).setParameter(1, cashBillReceiptRelation.getBillId())
 						.setParameter(2, cashBillReceiptRelation.getCodCli()).executeUpdate();
-				
-				
-				int value = ClsCreditManager.get03b11CorBalanceDocument(em, cashBillReceiptRelation.getBillId(), cashBillReceiptRelation.getCodCli(),
-						cashBillReceiptRelation.getFee(), cashBillReceiptRelation.getBillType(), cashBillReceiptRelation.getJdBranchId());
-			
-				
-				 cashBillReceiptRelation.setNewCorAmount(value);
-				 
+
+				int value = ClsCreditManager.get03b11CorBalanceDocument(em, cashBillReceiptRelation.getBillId(),
+						cashBillReceiptRelation.getCodCli(), cashBillReceiptRelation.getFee(),
+						cashBillReceiptRelation.getBillType(), cashBillReceiptRelation.getJdBranchId());
+
+				cashBillReceiptRelation.setNewCorAmount(value);
 
 				ClsSystemLogs.createQueryLog(idJsonLog, "updatePendingAmount", sQuery, true, rows,
 						new Object[] { cashBillReceiptRelation.getBillId(), cashBillReceiptRelation.getCodCli() });
@@ -868,140 +892,114 @@ public class ClsCreditManager {
 				ClsCashManager.setErrorMsg2(e.getMessage());
 				e.printStackTrace();
 			}
-			
-			if(checkDomesticPendingAmount) {
-				checkDomesticPendingAmount(em, 
-						batchNumber, 
-						cashBillReceiptRelation.getBillId(),
-						cashBillReceiptRelation.getCodCli(), 
-						cashBillReceiptRelation.getBillType(),
-						cashBillReceiptRelation.getFee(),
-						idJsonLog
-					);			
+
+			if (checkDomesticPendingAmount) {
+				checkDomesticPendingAmount(em, batchNumber, cashBillReceiptRelation.getBillId(),
+						cashBillReceiptRelation.getCodCli(), cashBillReceiptRelation.getBillType(),
+						cashBillReceiptRelation.getFee(), idJsonLog);
 			}
-			
+
 		}
 	}
-	
-	@SuppressWarnings("unchecked")
-	public static void checkDomesticPendingAmount(EntityManager em, int rpicu, int rpdoc, int rpan8, String rpdct, String rpsfx, int idJsonLog) {
-		try {
-			
 
-			String billToCheckSearchCriteria = 
-					"where	 rpdoc = '@RPDOC' and rpan8 = '@RPAN8' and trim(rpdct) = trim('@RPDCT') and trim(rpsfx) = trim('@RPSFX') and rpfap = 0 and rpaap <> 0";
-			
-			billToCheckSearchCriteria = billToCheckSearchCriteria					 
-					.replace("@RPDOC", String.valueOf( rpdoc ) )
-					.replace("@RPAN8", String.valueOf( rpan8 ) )
-					.replace("@RPDCT", String.valueOf( rpdct ) )
-					.replace("@RPSFX", String.valueOf( rpsfx ) )
-					;		
-			
-			String queryCheckBill = 
-					 " select cast(rpaap as integer) rpaap" 
-					+" from @JDEDTA.F03B11 " 
-					+  billToCheckSearchCriteria ;
-			
-			queryCheckBill = queryCheckBill
-					.replace("@JDEDTA",  CollectionScheme.SchemeJDE )
-					;
-			
+	@SuppressWarnings("unchecked")
+	public static void checkDomesticPendingAmount(EntityManager em, int rpicu, int rpdoc, int rpan8, String rpdct,
+			String rpsfx, int idJsonLog) {
+		try {
+
+			String billToCheckSearchCriteria = "where	 rpdoc = '@RPDOC' and rpan8 = '@RPAN8' and trim(rpdct) = trim('@RPDCT') and trim(rpsfx) = trim('@RPSFX') and rpfap = 0 and rpaap <> 0";
+
+			billToCheckSearchCriteria = billToCheckSearchCriteria.replace("@RPDOC", String.valueOf(rpdoc))
+					.replace("@RPAN8", String.valueOf(rpan8)).replace("@RPDCT", String.valueOf(rpdct))
+					.replace("@RPSFX", String.valueOf(rpsfx));
+
+			String queryCheckBill = " select cast(rpaap as integer) rpaap" + " from @JDEDTA.F03B11 "
+					+ billToCheckSearchCriteria;
+
+			queryCheckBill = queryCheckBill.replace("@JDEDTA", CollectionScheme.SchemeJDE);
+
 			System.out.println(" buscar factura : " + queryCheckBill);
-			
-			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-SearchBill", queryCheckBill, false, 1,  null);
-			
+
+			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-SearchBill", queryCheckBill, false, 1, null);
+
 			List<Object> object = em.createNativeQuery(queryCheckBill, Object.class).getResultList();
 
-			int rpaap = (object == null || object.isEmpty() || object.get(0) == null ) ? 0 : Integer.parseInt(object.get(0).toString());
+			int rpaap = (object == null || object.isEmpty() || object.get(0) == null) ? 0
+					: Integer.parseInt(object.get(0).toString());
 
 			if (rpaap == 0) {
 				return;
 			}
-			
+
 			String lastRowReceiptSearchCriteria = " where rzicu = '@RZICU' and rzan8 = '@RZAN8' and rzdoc = '@RZDOC' and trim(rzdct) = trim('@RZDCT') and trim(rzsfx) = trim('@RZSFX') ";
-			lastRowReceiptSearchCriteria = lastRowReceiptSearchCriteria
-					.replace("@JDEDTA",  CollectionScheme.SchemeJDE )
-					.replace("@RZICU", String.valueOf( rpicu ) )
-					.replace("@RZAN8", String.valueOf( rpan8 ) )
-					.replace("@RZDOC", String.valueOf( rpdoc ) )					
-					.replace("@RZDCT", String.valueOf( rpdct ) )
-					.replace("@RZSFX", String.valueOf( rpsfx ) )
-					;
-			
-			String getLastRowReceipt =
-				 " select cast( rzpyid as integer) || '@' || cast(  rzrc5 as integer) "
-				+" from @JDEDTA.F03B14 "
-				+ lastRowReceiptSearchCriteria
-				+" order by rzpyid desc "
-				+" fetch first rows only " 
-				;
-			
-			getLastRowReceipt = getLastRowReceipt.replace("@JDEDTA",  CollectionScheme.SchemeJDE );
-			
+			lastRowReceiptSearchCriteria = lastRowReceiptSearchCriteria.replace("@JDEDTA", CollectionScheme.SchemeJDE)
+					.replace("@RZICU", String.valueOf(rpicu)).replace("@RZAN8", String.valueOf(rpan8))
+					.replace("@RZDOC", String.valueOf(rpdoc)).replace("@RZDCT", String.valueOf(rpdct))
+					.replace("@RZSFX", String.valueOf(rpsfx));
+
+			String getLastRowReceipt = " select cast( rzpyid as integer) || '@' || cast(  rzrc5 as integer) "
+					+ " from @JDEDTA.F03B14 " + lastRowReceiptSearchCriteria + " order by rzpyid desc "
+					+ " fetch first rows only ";
+
+			getLastRowReceipt = getLastRowReceipt.replace("@JDEDTA", CollectionScheme.SchemeJDE);
+
 			System.out.println(" buscar ultimo pago en recibos : " + getLastRowReceipt);
-			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-getLastRowReceipt", getLastRowReceipt, false, 1,  null);
-			
+			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-getLastRowReceipt", getLastRowReceipt, false, 1,
+					null);
+
 			object = em.createNativeQuery(getLastRowReceipt, Object.class).getResultList();
-			String paymentId = (object == null || object.isEmpty() || object.get(0) == null )? "" : String.valueOf(object.get(0).toString());
-			
-			if(paymentId.isEmpty())
+			String paymentId = (object == null || object.isEmpty() || object.get(0) == null) ? ""
+					: String.valueOf(object.get(0).toString());
+
+			if (paymentId.isEmpty())
 				return;
-			
-			String queryModifyGainLossReceiptAmount =
-				 " update @JDEDTA.F03B14 "
-				+" set rzagl = rzagl @OPERATOR @RPAAP "
-				+ lastRowReceiptSearchCriteria + " and rzpyid = '@RZPYID' and rzrc5 = '@RZRC5' "
-				;
- 
+
+			String queryModifyGainLossReceiptAmount = " update @JDEDTA.F03B14 " + " set rzagl = rzagl @OPERATOR @RPAAP "
+					+ lastRowReceiptSearchCriteria + " and rzpyid = '@RZPYID' and rzrc5 = '@RZRC5' ";
+
 			queryModifyGainLossReceiptAmount = queryModifyGainLossReceiptAmount
-				.replace("@JDEDTA",  CollectionScheme.SchemeJDE )
-				.replace("@OPERATOR", ( rpaap > 0? "-" : "+" ) )
-				.replace("@RPAAP",  String.valueOf( Math.abs(rpaap) ) )
-				.replace("@RZPYID", String.valueOf( paymentId.split("@")[0] ) )
-				.replace("@RZRC5",  String.valueOf( paymentId.split("@")[1] ) );
-			
-			String updateDomesticPendingAmount = 
-					"UPDATE @JDEDTA.F03B11 SET RPAAP = 0 "
-					+ billToCheckSearchCriteria;
-			updateDomesticPendingAmount = updateDomesticPendingAmount.replace("@JDEDTA",  CollectionScheme.SchemeJDE );
-			
+					.replace("@JDEDTA", CollectionScheme.SchemeJDE).replace("@OPERATOR", (rpaap > 0 ? "-" : "+"))
+					.replace("@RPAAP", String.valueOf(Math.abs(rpaap)))
+					.replace("@RZPYID", String.valueOf(paymentId.split("@")[0]))
+					.replace("@RZRC5", String.valueOf(paymentId.split("@")[1]));
+
+			String updateDomesticPendingAmount = "UPDATE @JDEDTA.F03B11 SET RPAAP = 0 " + billToCheckSearchCriteria;
+			updateDomesticPendingAmount = updateDomesticPendingAmount.replace("@JDEDTA", CollectionScheme.SchemeJDE);
+
 			System.out.println(" actualizar dif cambiario:  " + queryModifyGainLossReceiptAmount);
-						
+
 			int rowsAffected = 0;
-			rowsAffected =  em.createNativeQuery(queryModifyGainLossReceiptAmount).executeUpdate();
-			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-updateGainLoss", queryModifyGainLossReceiptAmount, true, rowsAffected,  null);
-			if(rowsAffected != 1 )
+			rowsAffected = em.createNativeQuery(queryModifyGainLossReceiptAmount).executeUpdate();
+			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-updateGainLoss",
+					queryModifyGainLossReceiptAmount, true, rowsAffected, null);
+			if (rowsAffected != 1)
 				return;
-			
-			System.out.println(" actualizar saldo pendiente factura :  " + updateDomesticPendingAmount ) ;
-			rowsAffected =  em.createNativeQuery(updateDomesticPendingAmount).executeUpdate();
-			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-updateDomesticPendingAmount", updateDomesticPendingAmount, true, rowsAffected,  null);
-			if(rowsAffected != 1 )
-				return;			
-			
+
+			System.out.println(" actualizar saldo pendiente factura :  " + updateDomesticPendingAmount);
+			rowsAffected = em.createNativeQuery(updateDomesticPendingAmount).executeUpdate();
+			ClsSystemLogs.createQueryLog(idJsonLog, "CheckDomPendAmount-updateDomesticPendingAmount",
+					updateDomesticPendingAmount, true, rowsAffected, null);
+			if (rowsAffected != 1)
+				return;
+
 		} catch (Exception e) {
 			ClsCashManager.setErrorMsg2(e.getMessage());
 			e.printStackTrace();
 		}
 	}
-	
-	
-
 
 	@SuppressWarnings("unchecked")
-	public static int get03b11CorBalanceDocument(EntityManager em, int billId, int clientId, String fee, String billType, String branchId) {
+	public static int get03b11CorBalanceDocument(EntityManager em, int billId, int clientId, String fee,
+			String billType, String branchId) {
 		int batchNumber = 0;
 		try {
 
 			List<Object> object = new ArrayList<Object>();
 			;
 
-			String sQuery = "Select RPAAP batchNumber FROM " + CollectionScheme.SchemeJDE + ".F03B11 " + "where RPAN8 = "
-					+ clientId + " " + " AND TRIM(RPSFX) = '"
-					+ fee + "'  " + "and RPDOC = " + billId
-					+ " AND RPDCT='" + billType + "' " + " AND RPKCO = '"
-					+ branchId + "'";
+			String sQuery = "Select RPAAP batchNumber FROM " + CollectionScheme.SchemeJDE + ".F03B11 "
+					+ "where RPAN8 = " + clientId + " " + " AND TRIM(RPSFX) = '" + fee + "'  " + "and RPDOC = " + billId
+					+ " AND RPDCT='" + billType + "' " + " AND RPKCO = '" + branchId + "'";
 
 			object = em.createNativeQuery(sQuery, Object.class).setParameter(1, billId).setParameter(2, clientId)
 					.getResultList();
@@ -1015,10 +1013,10 @@ public class ClsCreditManager {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
-		
+
 		return batchNumber;
 	}
-	
+
 	/**
 	 * 
 	 * {@link Util} functions
@@ -1912,11 +1910,13 @@ public class ClsCreditManager {
 				" " + 10 + ", " + // --> [Pos 036 (RZUTIC)]
 				"'" + FMUUtil.getJdLineNumberSpace(lineId) + lineId + "', " + // --> [Pos 037 (RZMCU)]
 				"'" + receiptTxt + "', " + // --> [Pos 038 (RZRMK)]
-				
-				//" " + exchange + ", " + // --> [Pos 039 (RZHCRR)]
-				" " + historicalExchangeRate + ", " + /** Mod: set bill exchange rate for historical and gain/loss calculate 2020-08-19 ch*/ // --> [Pos 039 (RZHCRR)] 
-				
-				
+
+				// " " + exchange + ", " + // --> [Pos 039 (RZHCRR)]
+				" " + historicalExchangeRate + ", " + /**
+														 * Mod: set bill exchange rate for historical and gain/loss
+														 * calculate 2020-08-19 ch
+														 */ // --> [Pos 039 (RZHCRR)]
+
 				" " + (isCancelComplete ? 0 : 1) + ", " + // --> [Pos 040 (RZPDLT)]
 				" " + payDate + ", " + // --> [Pos 041 (RZDDJ)]
 				" " + payDate + ", " + // --> [Pos 042 (RZDDNJ)]
